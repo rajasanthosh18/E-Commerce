@@ -1,14 +1,13 @@
 import express from 'express';
-import { AuthController } from '../Controllers/UserController';
-import { UserService } from '../services/userService';
-import {signTokenMiddleware,verifyToken} from '../Middleware/AuthMiddleware';
+import { loginUser, profile, registerUsers } from '../Controllers/UserController';
 
 
 const router = express.Router();
-const authController = new AuthController(new UserService);
 
-router.post('/register', authController.registerUser);
-router.post('/login', signTokenMiddleware, authController.loginUser); 
-router.get('/profile',verifyToken,authController.profile)
+
+
+router.post('/register', async(req,res) => await registerUsers(req,res));
+router.post('/login', async (req,res) => await loginUser(req,res)); 
+router.get('/profile', async (req,res)=> await profile(req,res))
 
 export default router;

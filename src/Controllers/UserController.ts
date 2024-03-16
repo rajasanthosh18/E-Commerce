@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
-import { UserService } from '../services/userService';
 
-import {signTokenMiddleware, verifyToken} from '../Middleware/authMiddleware';
-import User from '../Models/user';
+import {signTokenMiddleware, verifyToken} from '../Middleware/AuthMiddleware';
+import User from '../Models/User';
+import { authenticateUser, registerUser } from '../Services/userService';
 
 interface LoginRequest extends Request{
     body: {
@@ -19,13 +19,11 @@ interface RegistrationRequest extends Request {
     }
 }
 
-export class AuthController {
-    constructor(private userService: UserService) {}
 
-    public registerUser = async (req: RegistrationRequest, res: Response) => {
+
+export async function registerUsers (req: RegistrationRequest, res: Response)  {
 
         try {
-            
             const { username, email, password } = req.body;
             const user: User = {
                 userId: '001',
@@ -33,41 +31,41 @@ export class AuthController {
                 email: email,
                 password: password
             }
-            const newUser = await this.userService.registerUser(user);
-            console.log(newUser);
+            const newUser = await registerUser(user);
+            if("Already Have an Account" === newUser){
+                throw new Error("Already Have an Account");
+            } 
             
-            res.status(201).json({ message: 'User registered successfully', user: newUser });
+            res.status(201)
+            res.json({ message: 'User registered successfully', user: newUser });
         } catch (error) {
-            console.error('Error registering user:', error);
-            res.status(500).json({ message: 'Internal server error' });
+            res.status(500)
+            res.json({ message: 'Internal server error' });
         }
     };
 
 
 
-    public loginUser = async (req: LoginRequest, res: Response) => {
+export async function loginUser (req: LoginRequest, res: Response)  {
         try {
             const { username, password } = req.body;
 
-            const user = await this.userService.authenticateUser(username, password);
+            const user = await authenticateUser(username, password);
 
             if (!user) {    
                 return res.status(401).json({ message: 'Invalid email or password' });
             }
-
-            // console.log(user.Item);      
             
-            signTokenMiddleware(req,res,() => {
+            await signTokenMiddleware(req,res,() => {
                 res.status(200).json({ message: 'Login successful', user });
             })
 
         } catch (error) {
-            console.error('Error logging in user:', error);
-            res.status(500).json({ message: 'Internal server error' });
+            res.status(500);
         }
     };
 
-    public profile = async (req: Request,res: Response) => {
+export async function profile (req: Request,res: Response)  {
         try{
             verifyToken(req,res,()=>{
                 res.status(200).json({ message: 'valid credentials ' });
@@ -79,7 +77,5 @@ export class AuthController {
         }
        
     }
-}
 
-export default new AuthController(new UserService());
 

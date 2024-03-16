@@ -1,5 +1,6 @@
 import { PutItemCommand, PutItemCommandInput, QueryCommand, QueryCommandInput, QueryInput, TransactWriteItemsCommand, UpdateItemCommand, UpdateItemCommandInput } from "@aws-sdk/client-dynamodb";
 import { client } from "../index";
+import { filteredData } from "../Middleware/CustomerMiddleware";
 
 const TableName = 'e-store'
 
@@ -19,9 +20,17 @@ export async function getOrderDetail(OrderId: string) {
     try {
         const res = await client.send(new QueryCommand(params));
         console.log("Retrieved order details from GSI:", res.Items);
-        return res;
+        const filteredData = res?.Items?.map(item => ({
+            name: item.name.S,
+            email: item.email.S,
+        }));
+        if(filteredData?.length === 0) {
+            throw new Error()
+        }
+        return filteredData;
     } catch (error) {
         console.log("Error accessing order details from GSI:", error);    
+        return "Error"
     }
 }
 
@@ -44,9 +53,15 @@ export async function getCustomer( CustomerName: string) {
     try{
         const res = await client.send(command);
         
-        return res.Items;
+
+        const result = await filteredData(res.Items);
+        console.log(result);
+        
+        return result;
     }catch(E){
-        console.log("Error : ",E);
+        console.log();
+        
+        return 'No Customer Details';
     }
 }
 
@@ -82,10 +97,10 @@ export async function createCustomer(username:string,email:string) {
         
         const res =  await client.send(transactWriteItem);
         console.log("Transaction Completed !");
-        return res
+        return "Success"
     }catch(e){
         console.log("Error in Create Customer :" ,e);
-        return e;        
+        return 'Already have an Account';        
     }
 }
 
@@ -127,11 +142,12 @@ export async function addItemToOrders (orderId: string, itemId: string,content: 
         }
     })
     try{
-        const res = await client.send(command)
+        await client.send(command)
         console.log("added sucessfully");
-        return res
+        return "added sucessfully"
     }catch(E){
         console.log(E);   
+        return "Unable to add data"
     }
 }
 
@@ -174,3 +190,50 @@ export async function getOrderDetailsUsingGSI(orderId: string) {
         throw error;
     }
 }
+
+
+/*
+import { DynamoDBClient, UpdateTableCommand, UpdateTableCommandInput } from "@aws-sdk/client-dynamodb";
+import { client } from "../index";
+
+export default function GSIinitialize(TableName:string){
+    const params: UpdateTableCommandInput = {
+        TableName: TableName, 
+        AttributeDefinitions: [
+            { AttributeName: "GSI1PK", AttributeType: "S" },
+            { AttributeName: "GSI1SK", AttributeType: "S" },
+        ],
+        GlobalSecondaryIndexUpdates: [
+            {
+                Create: {
+                    IndexName: "GSI1",
+                    KeySchema: [
+                        { AttributeName: "GSI1PK", KeyType: "HASH" }, 
+                        { AttributeName: "GSI1SK", KeyType: "RANGE" }, 
+                    ],
+                    Projection: {
+                        ProjectionType: "ALL", 
+                    },
+                    ProvisionedThroughput: {
+                        ReadCapacityUnits: 5, 
+                        WriteCapacityUnits: 5, 
+                    },
+                },
+            },
+        ],
+    };
+
+    try{
+        client.send(new UpdateTableCommand(params))
+            .then((data) => {
+                console.log("GSI created successfully:", data);
+            })
+            .catch((error) => {
+                console.error("Error creating GSI:", error);
+            });
+    }catch(e){
+        console.log(e);
+        
+    }
+}
+*/

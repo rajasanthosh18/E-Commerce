@@ -1,10 +1,7 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
 
-import GSIinitialize from './services/initializeOfGSI';
 import express from 'express';
-import routes from './routes/CustomerRoutes';
-import authRoutes from './routes/AuthRoutes';
-
+import routes from './Routes/CustomerRoutes'
 const app = express()
 app.use(express.json())
 
@@ -17,11 +14,6 @@ export const client = new DynamoDBClient({
     }
 })
 // getOrder()
-app.use('/auth',authRoutes)
-
-app.use('/',routes)
-
-
 
 
 // accessOrderFromGSI(TableName,orderId);
@@ -34,7 +26,4 @@ app.use('/',routes)
 // getOrdersOfCustomer(TableName,"raja")
 // getOrders()
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
+export default app

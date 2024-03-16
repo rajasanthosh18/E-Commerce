@@ -1,6 +1,6 @@
 import { Request,Response, NextFunction } from "express";
 import jwt from 'jsonwebtoken';
-import { UserService } from '../services/userService';
+import { authenticateUser } from '../Services/userService';
 
 interface SignTokenRequest extends Request {
     body:{
@@ -15,8 +15,7 @@ const signTokenMiddleware = async (req:SignTokenRequest, res: Response,next: Nex
     try{
         const {username,password} = req.body;
 
-        const user = new UserService
-        user.authenticateUser(username, password);
+        const user= authenticateUser(username, password);
 
         const payload = {
             userId: JSON.stringify(user).slice(1,-1),
@@ -26,10 +25,9 @@ const signTokenMiddleware = async (req:SignTokenRequest, res: Response,next: Nex
         const token = jwt.sign(payload,"secret-key",{expiresIn: '1d'});
 
         res.header('Authorization', `Bearer ${token}`);
-
+        
         next();
     }catch(e){
-        console.error('Error signing JWT:', e);
         res.status(500).json({ message: 'Internal server error' });
     }
 }
@@ -39,12 +37,13 @@ const verifyToken = async (req: Request, res: Response,next: NextFunction) => {
     if (!token) {
         return res.status(401).json({ error: 'Authentication required' });
     }
-    jwt.verify(token, "secret-key", {}, (err, info) => {
+    await jwt.verify(token, "secret-key", {}, (err, info) => {
         if (err) {
-          return res.status(401).json({ error: 'Invalid token' });
+          return res.status(400).json({ error: 'Invalid token' });
         }
         console.log("successfull token !!");
-        
+        res.header('Authorization', `Bearer ${token}`);
+
         next();
     });
     
